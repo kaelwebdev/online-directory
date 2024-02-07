@@ -1,0 +1,23 @@
+{
+  "name": "gqlas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "json-server": "json-server --watch db.json"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@apollo/server": "^4.10.0",
+    "axios": "^1.6.5",
+    "graphql": "^16.8.1",
+    "json-server": "^1.0.0-alpha.21",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "7.6.8",
+    "mongoose-unique-validator": "4.0.0"
+  }
+}
