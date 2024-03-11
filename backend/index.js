@@ -1,227 +1,103 @@
 import { ApolloServer } from '@apollo/server';
-import { startStandaloneServer} from '@apollo/server/standalone';
-import './db.js'
-import Person from './models/person.js';
+import { expressMiddleware } from '@apollo/server/express4';
+import cors from 'cors';
+import express from 'express';
+
+import { createServer } from 'http';
+import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
+import { makeExecutableSchema } from '@graphql-tools/schema';
+import { WebSocketServer } from 'ws';
+import { useServer } from 'graphql-ws/lib/use/ws';
+
+import typeDefs from './typeDefs.js';
+import resolvers from './resolvers.js';
 import User from './models/user.js'
-import { GraphQLError } from 'graphql';
+
 import jwt from 'jsonwebtoken'
 
-
+const PORT = 4000;
 const JWT_SECRET = process.env.JWT_SECRET // JSON Web Token secret word
 
-const typeDefinitions = `
-    enum YesNo{
-        YES
-        NO
-    }
-    type Address {
-        city: String!
-        street: String!
-    }
+const schema = makeExecutableSchema({ typeDefs, resolvers });
+const app = express();
+const httpServer = createServer(app);
+const wsServer = new WebSocketServer({
+    server: httpServer,
+    path: '/graphql',
+    
+});
 
-    type Person {
-        id: String!
-        name: String!
-        phone: String
-        address: Address!
-    }
+const serverCleanup = useServer(
+    {
+        schema,
+        onConnect: async (ctx) => {
+            //console.log("onConnect");
+          },
+          onDisconnect(ctx, code, reason) {
+            //console.log('Disconnected!');
+          },
 
-    type User {
-        username: String!
-        friends: [Person]!
-        id: ID!
-    }
-
-    type Token {
-        value: String!
-    }
-
-    type Query {
-        personCount: Int!
-        allPersons(withPhone:YesNo): [Person]!
-        findPerson(name: String!): Person
-        me: User
-    }
-
-    type  Mutation {
-        addPerson(
-            name: String!
-            phone: String
-            city: String!
-            street: String!
-        ): Person
-
-        editNumber(
-            name: String!
-            phone: String!
-        ): Person
-
-        createUser(
-            username: String!
-        ): User
-
-        login(
-            username: String!
-            password: String!
-        ): Token
-
-        addAsFriend(
-            name: String!
-        ): User
-    }
-
-`
-const resolvers = {
-    Query: {
-        personCount: () => Person.collection.countDocuments(),
-        allPersons: async (root, args) => {
-            if (!args.withPhone) return Person.find({})
-            return Person.find({phone: {$exists: args.withPhone === 'YES'}})
-        },
-        findPerson: async (root, args) => {
-            const {name} = args
-            return Person.findOne({name})
-        },
-        me: (root, args, context) => {
-            return context.currentUser
+        context: async (ctx) => {
+            //console.log("context wsServer")
         }
     },
-    Person: {
-        address: (root) => {
-            return {
-                city: root.city,
-                street: root.street
-            }
-        }
-    },
-    Mutation: {
-        addPerson: async (root, args, context) => {
-            const { currentUser } = context
-
-            if (!currentUser) {
-                throw new GraphQLError("You need to be a registered user to perform this operation", {
-                    extensions: {
-                      code: 'UNAUTHORIZED_ERROR'
-                    }
-                });
-            }
-
-            const person = new Person({...args})
-
-            try {
-                await person.save()
-                currentUser.friends = currentUser.friends.concat(person)
-                await currentUser.save()
-            } catch (error) {
-                throw new GraphQLError("Error when trying to create a person", {
-                    extensions: {
-                      code: 'USER_INPUT_ERROR'
-                    }
-                });
-            }
-            return person
-        },
-        editNumber: async (root, args) => {
-            const person = await Person.findOne({name: args.name})
-            if (!person) return
-
-            person.phone = args.phone
-            try {
-                await person.save()
-            } catch (error) {
-                throw new GraphQLError("Error when trying to modify a number", {
-                    extensions: {
-                      code: 'USER_INPUT_ERROR'
-                    }
-                });
-            }
-            return person
-        },
-        createUser: (root, args) => {
-            const user = new User({username: args.username});
-            return user.save().catch( error => {
-                console.log(error);
-                throw new GraphQLError("Error when trying to create a User", {
-                    extensions: {
-                      code: 'USER_INPUT_ERROR'
-                    }
-                });
-            })
-        },
-        login: async(root, args) => {
-            const user = await User.findOne({ username: args.username});
-
-            //Pendiente hacer validacion de password real
-            if (!user || args.password !== 'pwdsecret') {
-                throw new GraphQLError("wrong credentials", {
-                    extensions: {
-                      code: 'USER_INPUT_ERROR'
-                    }
-                });
-            }
-
-            const userForToken = {
-                username: user.username,
-                id: user._id
-            }
-
-            return {
-                value: jwt.sign(userForToken, JWT_SECRET)
-            }
-        },
-        addAsFriend: async (root, args, context) => {
-            const { currentUser } = context
-
-            if (!currentUser) {
-                throw new GraphQLError("You need to be a registered user to perform this operation", {
-                    extensions: {
-                      code: 'UNAUTHORIZED_ERROR'
-                    }
-                });
-            }
-
-            const person = await Person.findOne({name: args.name})
-            const isFriend = currentUser.friends.some(friend => friend._id.equals(person._id));
-            
-            if (!isFriend) {
-                currentUser.friends = currentUser.friends.concat(person);
-                await currentUser.save()
-            } else {
-                throw new GraphQLError("The user cannot become a friend again because he or she is already your friend.", {
-                    extensions: {
-                      code: 'LOGICAL_USER_ERROR'
-                    }
-                });
-            }
-
-            return currentUser
-        }
-    }
-}
+    wsServer,
+)
 
 const server = new ApolloServer({
-    typeDefs: typeDefinitions,
-    resolvers,
+    schema,
+    plugins: [
+
+      // Proper shutdown for the HTTP server.
+      ApolloServerPluginDrainHttpServer({ httpServer }),
+  
+      // Proper shutdown for the WebSocket server.
+      {
+        async serverWillStart() {
+          return {
+            async drainServer() {
+              await serverCleanup.dispose();
+            },
+          };
+        },
+      },
+    ],
     formatError: (error) => {
         delete error.extensions.stacktrace;
         delete error.path;
         delete error.locations;
         return error;
     },
-    
-})
-
-const { url } = await startStandaloneServer(server, {
-    listen: { port: 4000 },
-    context: async ({req}) => {
-        const auth = req ? req.headers.authorization : null;
-        if (auth && auth.toLowerCase().startsWith("bearer ")) {
-            const token = auth.substring(7);
-            const {id} = jwt.verify(token, JWT_SECRET);
-            const currentUser = await User.findById(id).populate('friends')
-            return { currentUser }
-        }
-    }
 });
 
-console.log(`🚀  Server ready at: ${url}`);
+await server.start();
+app.use(
+    '/graphql', cors(), express.json(),
+    expressMiddleware(
+        server,
+        {
+            context: async ({req}) => {
+                /* if (req.headers['user-agent'] === 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36') {
+                    return {}; // Devolver el contexto vacío sin realizar ninguna acción adicional
+                } */
+                const authorization = req.headers.authorization;
+
+                
+                const auth = req ? req.headers.authorization : null;
+                if (auth && auth.toLowerCase().startsWith("bearer ")) {
+                    const token = auth.substring(7);
+                    const {id} = jwt.verify(token, JWT_SECRET);
+
+                    const currentUser = await User.findById(id).populate('friends')
+                    return { currentUser }
+                }
+            }
+        }
+    )
+);
+
+httpServer.listen(PORT, () => {
+    console.log(`🚀 Server is now running on http://localhost:${PORT}/graphql`);
+});
+
+

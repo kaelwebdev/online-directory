@@ -6,7 +6,7 @@ const shema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
-        minlength: 5
+        minlength: 3
     },
     phone: {
         type: String,

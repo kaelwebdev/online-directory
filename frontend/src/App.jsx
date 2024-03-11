@@ -8,15 +8,40 @@ import PersonForm from './PersonForm'
 import { usePersons } from './persons/custom_hooks'
 import { PhoneForm } from './PhoneForm'
 import LoginForm from './LoginForm'
-import { useApolloClient } from '@apollo/client'
+import { useApolloClient, useSubscription } from '@apollo/client'
 import { useState } from "react";
+import { PERSON_ADDED } from './persons/subscriptions'
+import { ALL_PERSONS } from './persons/queries'
+
+const useSubscriptions = (client) => {
+  
+}
 
 function App() {
 
   const {data, loading,  error} = usePersons();
   const [token, setToken] = useState(()=> localStorage.getItem('directorio_social_token'))
   const client = useApolloClient() //pendiente separar esta logica como customhook
-
+  const {data:data2, loading:loading2,  error:error2 } = useSubscription(
+    PERSON_ADDED, { 
+      onData: ({data})=> {
+        const {subscrPersonAdded} = data.data;
+        const dataInStoreQuery = client.readQuery({ query: ALL_PERSONS });
+        client.writeQuery({
+          query: ALL_PERSONS,
+          data: {
+            ...dataInStoreQuery,
+            allPersons: [
+              ...dataInStoreQuery.allPersons,
+              subscrPersonAdded
+            ]
+          }
+        })
+      },
+      //onError: (error) => {},
+      //onComplete: (some) => {}
+    }
+  );
   const logout = () => {
     //pendiente separar esta logica como customhook
     setToken(null)
@@ -24,10 +49,13 @@ function App() {
     client.resetStore()
   }
 
-
-  if (error) return <span style={'color: red'}>{error}</span>
   return (
     <>
+    {
+      error && (<span style={{color: "red", fontSize: "30px"}}>
+        {error.message + " (check the network or try later)"}
+      </span>)
+    }
       <div>
         <a href="https://vitejs.dev" target="_blank">
           <img src={viteLogo} className="logo" alt="Vite logo" />
@@ -51,16 +79,17 @@ function App() {
         loading ? <p>...Loading</p> :
         (
           <>
+            <Persons persons={data?.allPersons}/>
             {token ? <button onClick={logout}>Logout</button> : <LoginForm setToken={setToken}/>}
             <Persons persons={data?.allPersons}/>
             <PersonForm/>
             <PhoneForm/>
           </>
         )
-      }
+      } + 
      
     </>
-  )
+  ) 
 }
 
 export default App

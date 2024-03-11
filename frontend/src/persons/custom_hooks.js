@@ -7,15 +7,25 @@ export const usePersons = () => {
     return result; //return {data, error, loading}
 }
 
+
+const handleError = (error)=> {
+    const message = error.message || "Error";
+    const code = "";
+    return {
+        message,
+        code
+    }
+}
+
 export const useCreatePerson = () => {
     const [createPerson,  { data, loading, error }] = useMutation(
         CREATE_PERSON,
         { 
-            refetchQueries: [
+            /* refetchQueries: [
                 {
                     query: ALL_PERSONS
                 }
-            ],
+            ], */
            /* update: (store, response) => {
                 const dataInStoreQuery = store.readQuery({ query: ALL_PERSONS});
                 store.writeQuery({
@@ -30,10 +40,7 @@ export const useCreatePerson = () => {
                 })
             },*/
             onError: (error) => {
-                return {
-                    message: error.graphQLErrors[0].message,
-                    code: error.graphQLErrors[0]?.extensions?.code
-                }
+                return handleError(error)
             }
         }
     )
@@ -50,10 +57,7 @@ export const useUpdatePhone = () => {
                 }
             ],*/
             onError: (error) => {
-                return {
-                    message: error.graphQLErrors[0].message,
-                    code: error.graphQLErrors[0]?.extensions?.code
-                }
+                return handleError(error)
             }
         }
     )
@@ -70,10 +74,7 @@ export const useLogin = () => {
                 }
             ],*/
             onError: (error) => {
-                return {
-                    message: error.graphQLErrors[0].message,
-                    code: error.graphQLErrors[0]?.extensions?.code
-                }
+                return handleError(error)
             }
         }
     )
