@@ -6,12 +6,15 @@ import './App.css'
 import { Persons } from './Personas'
 import PersonForm from './PersonForm'
 import { usePersons } from './persons/custom_hooks'
+import { useUsers } from './users/custom_hooks'
 import { PhoneForm } from './PhoneForm'
 import LoginForm from './LoginForm'
 import { useApolloClient, useSubscription } from '@apollo/client'
 import { useState } from "react";
 import { PERSON_ADDED } from './persons/subscriptions'
 import { ALL_PERSONS } from './persons/queries'
+import UserForm from './UserForm'
+import { ListOfUsers } from './ListOfUsers'
 
 const useSubscriptions = (client) => {
   
@@ -20,6 +23,8 @@ const useSubscriptions = (client) => {
 function App() {
 
   const {data, loading,  error} = usePersons();
+  const {data:dataUsers, loading:loadingUsers,  error:errorUsers} = useUsers();
+
   const [token, setToken] = useState(()=> localStorage.getItem('directorio_social_token'))
   const client = useApolloClient() //pendiente separar esta logica como customhook
   const {data:data2, loading:loading2,  error:error2 } = useSubscription(
@@ -79,14 +84,21 @@ function App() {
         loading ? <p>...Loading</p> :
         (
           <>
-            <Persons persons={data?.allPersons}/>
-            {token ? <button onClick={logout}>Logout</button> : <LoginForm setToken={setToken}/>}
-            <Persons persons={data?.allPersons}/>
-            <PersonForm/>
-            <PhoneForm/>
+            <div className='main_grid'>
+              <div>
+                {token ? <button onClick={logout}>Logout</button> : <LoginForm setToken={setToken}/>}
+                <ListOfUsers users={dataUsers?.allUsers}/>
+                <Persons persons={data?.allPersons}/>
+              </div>
+              <div>
+                <PersonForm/>
+                <PhoneForm/>
+                <UserForm />
+              </div>
+            </div>
           </>
         )
-      } + 
+      }
      
     </>
   ) 

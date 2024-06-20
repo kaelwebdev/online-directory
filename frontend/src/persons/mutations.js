@@ -24,6 +24,25 @@ mutation createPerson($name: String!, $phone: String, $city: String!, $street: S
 
 `
 
+export const CREATE_USER = gql`
+mutation createUser($username: String!, $password: String!, $email: String!)
+{
+    createUser(
+        username: $username
+        password: $password
+        email: $email
+    ) {
+        id
+        username
+        password
+        email
+    }
+
+    
+}
+
+`
+
 export const EDIT_PHONE = gql`
 mutation editPhone($name: String!, $phone: String!)
 {

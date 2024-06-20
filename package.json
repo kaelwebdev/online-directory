@@ -1,0 +1,22 @@
+{
+  "name": "directorio-con-mongodb",
+  "version": "1.0.0",
+  "description": "(GraphQL + Apollo Server) + MongoDB\r ### Front\r (React + Vite + GraphQL + Apollo Client)",
+  "main": "index.js",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:*",
+    "dev:backend": "npm --workspace=backend run dev",
+    "dev:frontend": "npm --workspace=frontend run dev",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "npm-run-all": "^4.1.5"
+  }
+}

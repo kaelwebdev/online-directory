@@ -17,7 +17,9 @@ const typeDefs = `
 
     type User {
         username: String!
-        friends: [Person]!
+        password: String!
+        email: String!
+        friends: [Person]
         id: ID!
     }
 
@@ -28,6 +30,7 @@ const typeDefs = `
     type Query {
         personCount: Int!
         allPersons(withPhone:YesNo): [Person]!
+        allUsers: [User]!
         findPerson(name: String!): Person
         me: User
     }
@@ -47,6 +50,8 @@ const typeDefs = `
 
         createUser(
             username: String!
+            password: String!
+            email: String!
         ): User
 
         login(

@@ -1,6 +1,11 @@
 import { useQuery, useMutation } from '@apollo/client'
 import { ALL_PERSONS } from './queries'
-import { CREATE_PERSON, EDIT_PHONE, LOGIN } from './mutations'
+import {
+    CREATE_PERSON,
+    CREATE_USER,
+    EDIT_PHONE,
+    LOGIN
+} from './mutations'
 
 export const usePersons = () => {
     const result = useQuery(ALL_PERSONS);
@@ -45,6 +50,18 @@ export const useCreatePerson = () => {
         }
     )
     return [createPerson,  { data, loading, error }];
+}
+
+export const useCreateUser = () => {
+    const [createUser,  { data, loading, error }] = useMutation(
+        CREATE_USER,
+        { 
+            onError: (error) => {
+                return handleError(error)
+            }
+        }
+    )
+    return [createUser,  { data, loading, error }];
 }
 
 export const useUpdatePhone = () => {
